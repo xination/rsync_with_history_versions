@@ -15,7 +15,7 @@ to use this script you need:
 + a backup_plan.txt (included in this repo )
 
 to run backup simply, -r or --read means to read a backup plan:
-<pre>./rsync_remote.py -r backup_plan.txt </pre>
+<pre>./rsync_backup.py -r backup_plan.txt </pre>
 
 the backup instructions are listed in backup_plan.txt (of course, you can freely name your backup plan file, ex my_plan.dat )
 for example
