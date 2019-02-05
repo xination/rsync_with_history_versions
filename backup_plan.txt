@@ -1,0 +1,17 @@
+# this is for comment.
+do_local_backup: true
+local_backup_folder: ./backup
+
+#================================================
+do_remote_backup: false
+remote_backup_folder: YourID@server:/home/youID/backup/
+ssh_port: 21
+
+#================================================
+# adding sources (use relative or abs path)
+add_source: ./testFile
+add_source: ./testFold
+
+#================================================
+# delete history if it is over XX days from today.
+keep_version: 60

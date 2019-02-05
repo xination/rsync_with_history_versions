@@ -1,6 +1,5 @@
 # rsync_with_history_versions
-
-# Introduction  
+ 
 It is a rsync application to backup files and directories with the functionality to review/recover the modified or deleted files from the history.
 
 # How to use
