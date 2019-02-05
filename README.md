@@ -2,7 +2,7 @@
  
 It is a rsync application to backup files and directories with the functionality to review/recover the modified or deleted files from the history.
 
-# How to use
+# 1. How to backup
 <pre>git clone https://github.com/xination/rsync_with_history_versions </pre>
  
 Basically, I use a python script to control the flow and invoke subprocess to call bash commands.
@@ -31,4 +31,12 @@ add_source: /home/yourID/dir
 # keep the versions from today    
 keep_version: 60
 </pre>
+
+# 2. Preview/recover modified and deleted files
+
+We use the interactive mode by (-i option):
+<pre>/rsync_backup.py -ir backup_plan.txt</pre>
+It will be a menu-driven fashion.
+<img src="./doc/menu.png">
+
 

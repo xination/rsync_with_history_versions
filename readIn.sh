@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-read -e -p "opt = " opt;
+read -e -p "file = " opt;
 echo $opt
 
 

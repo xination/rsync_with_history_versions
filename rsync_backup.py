@@ -109,7 +109,7 @@ def do_cat( fName ):
 
 
 def getDateTime_info( ):
-    cmd = 'date "+%Y%m%d%H%M"'
+    cmd = 'date "+%Y%m%d%H%M%S"'
     p = subprocess.Popen( cmd, shell=True,  stdout=subprocess.PIPE )
     (dateTimeInfo,err) = p.communicate() 
     dateTimeInfo = dateTimeInfo.strip()
@@ -179,9 +179,9 @@ def make_a_fold( folderName ):
     cmd = "mkdir -p %s" %( folderName )
     subprocess.check_call( cmd, shell=True,  stdout=subprocess.PIPE )
 
-def remove_a_folder( folderName ):
-    cmd = "rm -r %s" %( folderName )
-    subprocess.check_call( cmd, shell=True,  stdout=subprocess.PIPE )
+def do_remove( folderName ):
+    cmd = "rm -r %s 2>/dev/null" %( folderName )
+    subprocess.Popen( cmd, shell=True,  stdout=subprocess.PIPE )
     pass
 
 
@@ -388,21 +388,28 @@ class RSYNC( ):
         versions = self.get_file_versions( fName )
         if( len(versions) == 0 ): return
 
-        print "available time stamp: "
+        print "available time stamp ( old -> new): "
+        print "%2s: %s" %("id", "year,mmdd,HHMM,S")
+        print "%2d: %s" %( len(versions)+1, "oldest")
         for idx, v in enumerate( versions ): 
             print "%2d: %s" %( ( len(versions) - idx), self.convert_to_readable( v ) )
         
         while( 1 ):
-            dateTime_idx = int( raw_input("select a timestamp: " ) )
-            dateTime_idx = len(versions) - dateTime_idx
-            # dateTime = self.convert_to_machine( dateTime)
-            dateTime = versions[ dateTime_idx ]
 
-            if dateTime not in versions:
-                print "%s is not available for %s" \
-                %( self.convert_to_readable( dateTime ), fName )
-            else:
+            ans = raw_input("select a timestamp: " )
+            if ans.lower() == "xx": break 
+            dateTime_idx = int( ans )
+
+            #======================================== for the oldest
+            if( dateTime_idx == len(versions)+1 ):
+                dateTime = "oldest"
                 break
+            else:
+            #======================================== for normal case
+                dateTime_idx = len(versions) - dateTime_idx
+                dateTime = versions[ dateTime_idx ]
+                if dateTime in versions: break
+
         return fName, dateTime 
 
 
@@ -415,8 +422,10 @@ class RSYNC( ):
         
         notFound = True
         while 1:
-            print "note: -1 to cancel"
-            fName = raw_input("input deleted filename: ")
+            print "note: xx to cancel"
+            ans = raw_input("input deleted filename: ")
+            if ans.lower() == "xx": break
+            fName = ans
             
             if( fName[:2] == './' ): fName.replace("./", "" )
          
@@ -464,6 +473,7 @@ class RSYNC( ):
 
         elif( opt == "1" ):
             versions = self.get_history_versions()
+            print "year,mmdd,HHMM,S"
             for v in versions: 
                 print self.convert_to_readable( v )
         
@@ -476,11 +486,12 @@ class RSYNC( ):
                 print " your input file does not exist"
             else:
                 versions = self.get_file_versions( fName )
+                print "year,mmdd,HHMM,S"
                 for v in versions: 
                     print self.convert_to_readable( v )
         
         elif( opt == "3" ):
-             
+              
             print "input filename [use tab to autocomplete]"
             while 1:
                 fName = do_bash_read()
@@ -494,22 +505,32 @@ class RSYNC( ):
 
             while ( 1 ):
 
-                print "available time stamp: "
+                print "available time stamp ( old -> new): "
+                print "%2s: %s" %("id", "year,mmdd,HHMM,S")
+                print "%2d: %s" %( len(versions)+1, "oldest")
+                
                 for idx, v in enumerate( versions ): 
                     print "%2d: %s" \
                     %( ( len(versions) - idx), self.convert_to_readable( v ) )
                 
-                print "note:  -1 to exit"
-                dateTime_idx = int( raw_input("select a timestamp: " ) )
-                if dateTime_idx == -1: break 
+                print "note:  xx to exit"
+                ans = raw_input("select a timestamp: " )
+                if ans.lower() == "xx": break 
+                dateTime_idx = int( ans )
+                
 
-                dateTime_idx = len(versions) - dateTime_idx
-                dateTime = versions[ dateTime_idx ]
-                if dateTime not in versions:
-                    print "%s is not available for %s" \
-                    %( self.convert_to_readable( dateTime ), fName )
-                else:
+                #======================================== for the oldest
+                if( dateTime_idx == len(versions)+1 ):
+                    dateTime = "oldest"    
                     self.view_previous_version( fName, dateTime )
+                else:    
+                #======================================== for normal case
+                    dateTime_idx = len(versions) - dateTime_idx
+                    dateTime = versions[ dateTime_idx ]
+
+                    if dateTime in versions:
+                        self.view_previous_version( fName, dateTime )
+ 
 
 
         elif( opt == "4" ):
@@ -519,25 +540,39 @@ class RSYNC( ):
         elif( opt == "5" ):
             self.show_all_deleted_files( ) 
 
-        elif( opt == "6" ): 
-            fName = self.validate_fName_dateTime2()
-            if( fName != 0   ):
-                print "preview ", fName, ": "
-                print "============== result:"
-                do_cat( fName )
-
-        elif( opt == "7" ): 
-            fName = self.validate_fName_dateTime2()
-             
-            if( fName != 0   ):
-
-                fName_source = fName.split( "/deleted/")[-1]
+        elif( opt == "6" or opt == "7" ): 
+            self.show_all_deleted_files( )
+            while 1:
+                print "note: xx to cancel"
+                ans = raw_input("select file idx: ")
+                if ans.lower() == "xx": return
                 
-                source_dir = get_dirName( fName_source )
-                 
-                do_cp( fName, "/"+source_dir )
-                print "recovery is done" 
+                fName_idx = int( ans ) - 1
+                if fName_idx < len(self.deleted_files2):
+                    fName = self.deleted_files2[fName_idx]
+                    dateTime = self.dateTimes_for_deleted_files[ fName_idx ]
+                    dateTime = self.convert_to_machine( dateTime )
+                    break
+            
+                    
+            fName2  = self.backupDir + "/" + self.historyDir + "/" + \
+                    dateTime + "/" + "deleted/" + fName
+            
+            if( opt == "6" ):
+                print "preview ", fName2, ": "
+                print "============== result:"
+                do_cat( fName2 )
 
+            elif( opt == "7" ):
+                source_dir = get_dirName(  "/" + fName )
+                # print "TEST0",fName
+                # print "TEST1",fName2
+                # print "TEST2",source_dir
+                do_cp( fName2, "/"+source_dir ) 
+                do_remove( fName2 )
+                print "recovery is done"
+
+ 
          
 
 
@@ -839,7 +874,7 @@ class RSYNC( ):
             fName = fName[2:]
 
         # check input 
-        if len( do_ls(fName ) )== 0:
+        if len( do_ls(fName) )== 0:
             print "cannot find %s" %fName
             return 
 
@@ -848,7 +883,7 @@ class RSYNC( ):
         results = get_find_results( historyDir ) 
          
         idx1 = len( historyDir) + 1
-        idx2 = idx1 + 12 
+        idx2 = idx1 + 14 
         versions = []
         for result in results:
             if( result.find( fName) != -1 and result.find( "patch") != -1 ):
@@ -872,29 +907,26 @@ class RSYNC( ):
 
         versions = self.get_file_versions( fName )  
          
-        # check the input
+        # ==================================== validate input
+        # and print the selection
         inputCorrect=False
         for version in versions:
             if dateTime == version:
                 inputCorrect = True
 
-        if( inputCorrect == False ): 
+        if( inputCorrect == False and dateTime != "oldest" ): 
             print "%s is not available" %( dateTime )
             return []
         else:
             if( toPrint ):
-                for ii in range( len(versions) ):
-                     
-                    if( dateTime == versions[ii] ):
-                        pass
-                        print "%s <== selected" %( dateTime )
-                    else:
-                        print versions[ii]
-         
+                print "%s <== selected" %( dateTime )
+            
+        #=======================================================  
 
         # get the shortened versions
         versions_short = []
         toBreakNextTime = False
+        versions.sort( reverse=True )
         for version in versions:
             if( dateTime != version ):
                 versions_short.append( version )
@@ -907,19 +939,18 @@ class RSYNC( ):
         
 
     def back_to_previous_version( self, fName, dateTime, debug = False ):
-        # todo: remove debugFlag. we will create testing function
-        # somewhere else.
+         
 
-      
+        versions_short = self.get_versions_short( fName, dateTime, True )
+        if( dateTime == "oldest" ):
+            versions_short = self.get_file_versions( fName )
+            versions_short.sort( reverse=True)
 
-        versions_short = self.get_versions_short( fName, dateTime, False )
-        
-        if( len(versions_short) == 0 ): return
 
-  
-        
-        print "Current: "
-        do_cat( fName )   
+        if( debug ):
+            print "versions_short = ", versions_short       
+
+        # print "Current: "; do_cat( fName )
          
         
         # apply patches   
@@ -930,7 +961,7 @@ class RSYNC( ):
                 + version + "/patch/" +  fName + ".patch"
 
             if( debug ):     
-                print "-----------------------"   
+                print "\n-----------------------"   
                 print "patch version = ", version  
              
                      
@@ -940,8 +971,12 @@ class RSYNC( ):
                 print "after apply %s" %version  
                 do_cat( fName )                  
 
-        print "roll back to %s: " % self.convert_to_readable( version )         
-        do_touch( dateTime, fName ) # change the modification time.  
+        if dateTime == "oldest":
+            print "\nroll back to oldest: " 
+            # unfortunately we cannot change the modification time. 
+        else:
+            print "\nroll back to %s: " % self.convert_to_readable( version ) 
+            do_touch( dateTime[:12], fName ) # change the modification time.  
         do_cat( fName )
         pass
 
@@ -954,14 +989,16 @@ class RSYNC( ):
 
          
         versions_short = self.get_versions_short( fName, dateTime, True )
-
+        if( dateTime == "oldest" ):
+            versions_short = self.get_file_versions( fName )
+            versions_short.sort( reverse=True)
+        if( debug ): 
+            print "\ninside view_previous_version()"
+            print "versions_short = ", versions_short
         
-        # clean the old temp working folder (seems not necessary)    
-        # dirToRemove = self.backupDir + "/" + self.tempDir 
-        # remove_a_folder( dirToRemove )
-
         # make a temp working folder
         tempDir = self.backupDir + "/" + self.tempDir 
+        do_remove( tempDir )
         make_a_fold( tempDir )
 
         # make a copy  
@@ -976,14 +1013,15 @@ class RSYNC( ):
             print "latest version"            
             do_cat( fNameTemp )               
 
-        # apply patches        
+        # apply patches
+
         for version in versions_short:
             
             patchName = self.backupDir + "/" + self.historyDir + "/" \
                 + version + "/patch/" +  fName + ".patch"
 
             if( debug ):    
-                print "-----------------------"  # for debug
+                print "\n-----------------------"  # for debug
                 print "patch version = ", version
                 print "debug fNameTemp = ", fNameTemp
                     
@@ -994,8 +1032,11 @@ class RSYNC( ):
                 do_cat( fNameTemp ) #for debug
 
         # print on the screen.    
-        print "==================== preview result:"
+        print "\n====================================== preview result:"
         do_cat( fNameTemp )    
+        print "\n====================================== preview end"
+        
+        if( debug ): print "end"
         pass    
          
     ###################################################
@@ -1005,8 +1046,13 @@ class RSYNC( ):
         ''' print out all deleted files in backup/history/version/deleted/ '''
         historyDir = self.backupDir + "/" + self.historyDir + "/"
         results = get_find_results( historyDir, "-type f" )
-        
+       
+
         iFile = 0
+        self.deleted_files2 = []
+        temp_dateTimes = []
+        
+        #================= pre-process data
         for fName in results:
             if( fName.find("deleted/") != -1 ):
                 fName = fName.replace( historyDir ,"" )
@@ -1015,8 +1061,33 @@ class RSYNC( ):
                 dateTime = fName.split()[0]
                 dateTime = self.convert_to_readable( dateTime )
                 fName = fName.split()[-1]
+                self.deleted_files2.append( fName )
+                temp_dateTimes.append( dateTime )
                 iFile += 1 
-                print "%2d: %s: %s" %(iFile, dateTime, fName )
+                
+        if( iFile == 0 ):
+            print "no deleted files in the record."
+        
+        # =============== sort with dateTime
+        temp_deleted_files2 = []
+        self.dateTimes_for_deleted_files = []
+        while len(temp_dateTimes) > 0 :
+            idx = temp_dateTimes.index( min(temp_dateTimes) )
+            value = self.deleted_files2[idx]
+            temp_deleted_files2.append( value )
+            self.dateTimes_for_deleted_files.append( min(temp_dateTimes) )
+
+            del temp_dateTimes[idx]
+        self.deleted_files2 = temp_deleted_files2[:]
+        del temp_deleted_files2
+
+        # ===============  print out info
+        iFile = 1
+        print "deleted files (old -> new): "    
+        for dateTime, fName in \
+            zip( self.dateTimes_for_deleted_files, self.deleted_files2):
+            print "%2d: %s: %s" %(iFile, dateTime, fName )
+            iFile += 1 
         pass        
 
      
@@ -1030,7 +1101,9 @@ class RSYNC( ):
         return version.replace(",","" )    
         
     def convert_to_readable( self, version ):
-        return version[:4] + "," + version[4:8] + "," + version[8:]
+        return version[:4] + "," + version[4:8] + "," + \
+               version[8:12] + ","+version[12:]
+             
 
     def get_history_versions( self ):
         ''' get all the dirnames (dateTime) under history dir''' 
@@ -1054,7 +1127,9 @@ class RSYNC( ):
             day    = int( version[ 6:8] )
             hour   = int( version[ 8:10] )
             minute = int( version[ 10:12] )
-            version_pretty= "%d,%s,%d%d" %(year,version[4:8], hour,minute)
+            second = int( version[ 12:14] )
+
+            version_pretty= "%d,%s,%d%d,%d" %(year,version[4:8], hour,minute,second)
             version_date = date( year, month, day )
             deltaTime = abs( today - version_date )
             deltaTime_days = deltaTime.days
@@ -1064,7 +1139,7 @@ class RSYNC( ):
 
             if ( self.upperDays < deltaTime_days ):
                 dirName = self.backupDir + "/" + self.historyDir + "/" + version
-                remove_a_folder( dirName )
+                do_remove( dirName )
                 if( debug ): print "remove folder: %s" %(dirName)
             
             pass
@@ -1118,11 +1193,12 @@ if __name__ == '__main__':
     ./script -dr backup_plan 
         """
     elif( arguments['--dry-run'] ):
+        # no backup, just dry run
         rsync_tool.read_in_backup_plan( arguments['--read'] ) 
         rsync_tool.debug_run()
 
     elif( arguments['--read'] and arguments['--interactive'] ):
-        # not finish yet.
+        # have backup 
         rsync_tool.read_in_backup_plan( arguments['--read'] )
         rsync_tool.process()
         rsync_tool.show_menu()
