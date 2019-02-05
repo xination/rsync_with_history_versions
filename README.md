@@ -39,4 +39,9 @@ We use the interactive mode by (-i option):
 It will be a menu-driven fashion.
 <img src="./img/menu.png">
 
+Some test files are in this repo: 
+testFile and testFold/ 
+you can play around it ( the backup_plan.txt is ready to go.)
+
+
 
