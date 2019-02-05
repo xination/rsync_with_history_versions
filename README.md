@@ -37,6 +37,6 @@ keep_version: 60
 We use the interactive mode by (-i option):
 <pre>/rsync_backup.py -ir backup_plan.txt</pre>
 It will be a menu-driven fashion.
-<img src="./doc/menu.png">
+<img src="./img/menu.png">
 
 
